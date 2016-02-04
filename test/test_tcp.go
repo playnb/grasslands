@@ -2,11 +2,11 @@ package test
 
 import (
 	"TestGo/Msg"
+	"github.com/golang/protobuf/proto"
 	"github.com/playnb/mustang/log"
 	"github.com/playnb/mustang/network"
 	"github.com/playnb/mustang/network/protobuf"
 	"github.com/playnb/mustang/utils"
-	"github.com/golang/protobuf/proto"
 	"reflect"
 	"time"
 )
@@ -40,7 +40,7 @@ func (s *TcpServer) Run(closeSig chan bool) {
 		a.server = s
 		a.SetConn(conn)
 		a.SetName("TCPServerAgent")
-		a.SetProtobufProcessor(utils.ProtobufProcess)
+		a.SetProtobufProcessor(protobuf.ProtobufProcess)
 		s.agent = a
 		return a
 	}
@@ -75,7 +75,7 @@ func runClient() {
 	client.NewAgent = func(conn *network.TCPConn) network.IAgent {
 		a := new(TCPClientAgent)
 		a.SetConn(conn)
-		a.SetProtobufProcessor(utils.ProtobufProcess)
+		a.SetProtobufProcessor(protobuf.ProtobufProcess)
 		a.SetName("TCPClientAgent")
 		return a
 	}
@@ -91,13 +91,13 @@ func runClient() {
 }
 
 func TestTcp() {
-	utils.ProtobufProcess.Register(new(Msg.EchoMsg), tcpHandleMsg)
+	protobuf.ProtobufProcess.Register(new(Msg.EchoMsg), tcpHandleMsg)
 
 	go runClient()
 
 	time.Sleep(10 * time.Second)
 	server := new(TcpServer)
-	server.ProtobufProcessor = utils.ProtobufProcess
+	server.ProtobufProcessor = protobuf.ProtobufProcess
 	server.Addr = testAddr
 	server.Run(utils.CloseSig)
 }

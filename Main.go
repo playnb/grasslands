@@ -1,149 +1,184 @@
 package main
 
 import (
-	"TestGo/Msg"
+	//"TestGo/Msg"
 	"github.com/playnb/mustang/auth"
-	"github.com/playnb/mustang/gate"
+	"github.com/playnb/mustang/weixin"
+	//"github.com/playnb/mustang/gate"
 	"github.com/playnb/mustang/log"
-	"github.com/playnb/mustang/network"
+	//"github.com/playnb/mustang/network"
 	//"TestGo/mustang/network/protobuf"
 	"github.com/playnb/mustang/utils"
-	"TestGo/test"
-	"fmt"
-	"github.com/golang/protobuf/proto"
-	"reflect"
+	//"github.com/golang/protobuf/proto"
+	"github.com/playnb/grasslands/gateservice"
+	"github.com/playnb/grasslands/superservice"
+	"github.com/playnb/grasslands/test"
+	"github.com/playnb/mustang/global"
+	"github.com/playnb/mustang/nosql"
+	"github.com/playnb/mustang/sqldb"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"text/template"
 )
 
-type NeedIF interface {
-	IF()
-}
-
-type EchoRequest struct {
-	Msg              *string `protobuf:"bytes,1,opt,name=msg" json:"msg,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (this *EchoRequest) IF() {
-
-}
-
-func WhoAmI(me interface{}) string {
-	t := reflect.TypeOf(me)
-	return t.String()[1:]
-}
-
-func test_WhoAmI() {
-	echo := &EchoRequest{}
-	log.Trace(WhoAmI(echo))
-}
-
-func pbyte(b []byte) {
-	fmt.Print("OUT: ")
-	for i := 0; i < len(b); i++ {
-		fmt.Print(b[i], ",")
-	}
-	fmt.Print("\n")
-}
-
-func cbyte(b []byte) {
-	for i := 0; i < len(b); i++ {
-		b[i] = b[i] + 1
-	}
-}
-
-func test_slice() {
-	b := [10]byte{}
-	for i := 0; i < 10; i++ {
-		b[i] = byte(i)
-	}
-	pbyte(b[0:])
-	cbyte(b[0:])
-	pbyte(b[0:])
-}
-
 /*
-func handleMsg(t reflect.Type, m []interface{}) {
-	if "Msg.EchoMsg" != t.String() {
-		return
-	}
-	msg := m[0].(*Msg.EchoMsg)
-	log.Debug(msg.GetEchoString())
-}
-
-func test_process() {
-	utils.ProtobufProcess.Register(new(Msg.EchoMsg), handleMsg)
-
-	msg1 := new(Msg.EchoMsg)
-	msg1.EchoCode = proto.Uint32(1)
-	msg1.EchoString = proto.String("hi all")
-	if data, err := utils.ProtobufProcess.PackMsg(msg1); err != nil {
-		log.Trace(err.Error())
-	} else {
-		utils.ProtobufProcess.Handler(data)
-	}
-}
+oqxYYs5Y8h0_UTpKJLngn6VLNb_8
+oqxYYs-koxpfISmvqFJK-Z3DveAc
 */
 
-func gateHandleMsg(agant network.IAgent, msgType reflect.Type, message interface{}, data []interface{}) {
-	if "Msg.EchoMsg" != msgType.String() {
+func substr(s string, pos, length int) string {
+	runes := []rune(s)
+	l := pos + length
+	if l > len(runes) {
+		l = len(runes)
+	}
+	return string(runes[pos:l])
+}
+func getCurrentDirectory() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Error(err.Error())
+	}
+	return strings.Replace(dir, "\\", "/", -1)
+}
+func getParentDirectory(dirctory string) string {
+	return substr(dirctory, 0, strings.LastIndex(dirctory, "/"))
+}
+
+var baseDir = getParentDirectory(getCurrentDirectory()) + "/src/github.com/playnb/grasslands/"
+
+func handleStatic(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	index := strings.LastIndex(path, ".")
+	if index != -1 {
+		request_type := path[index:]
+		switch request_type {
+		case ".css":
+			w.Header().Set("content-type", "text/css")
+		case ".js":
+			w.Header().Set("content-type", "text/javascript")
+		default:
+		}
+	}
+	path = baseDir + path
+	log.Trace("获取静态文件: %s", path)
+	fin, err := os.Open(path)
+	defer fin.Close()
+	if err != nil {
+		log.Error("static resource: %v", err)
+		w.WriteHeader(505)
+	} else {
+		fd, _ := ioutil.ReadAll(fin)
+		w.Write(fd)
+	}
+}
+
+func handleAppDemo(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Visit: %s", r.Proto+r.Host+r.RequestURI)
+	r.ParseForm()
+	var data struct {
+		AccessToken string
+		OpenID      string
+		TimeStamp   string
+		Nonce       string
+		Signature   string
+		ShareOpenID string
+	}
+	data.AccessToken = strings.Join(r.Form["access_token"], "")
+	data.OpenID = strings.Join(r.Form["openid"], "")
+	data.TimeStamp = strings.Join(r.Form["timestamp"], "")
+	data.Nonce = strings.Join(r.Form["nonce"], "")
+	data.ShareOpenID = strings.Join(r.Form["shareOpenID"], "")
+	data.Signature = weixin.MakeSignature_js(data.TimeStamp, data.Nonce, weixin.Profile().JsApiTicket, "http://"+r.Host+r.RequestURI)
+	path := baseDir + "/htdoc/app/demo.html"
+	tpl, err := template.ParseFiles(path)
+	if err != nil {
+		log.Debug(err.Error())
 		return
 	}
-	msg := message.(*Msg.EchoMsg)
-	log.Debug(msg.GetEchoString())
-	msg.EchoString = proto.String("i will be back.....")
-	agant.WriteMsg(msg)
-	msg.EchoString = proto.String("i am back.....")
-	agant.WriteMsg(msg)
+	err = tpl.Execute(w, data)
+	if err != nil {
+		log.Debug(err.Error())
+		return
+	}
 }
 
-func test_gate() {
-	utils.ProtobufProcess.Register(new(Msg.EchoMsg), gateHandleMsg)
+//作为一个代理访问微信web的api(等弄明白js咋个跨域就不用这个了)
+func handleWxApi(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Visit: %s", r.RequestURI)
+	url := r.RequestURI
+	url = strings.Replace(url, "/wx/api/", "https://api.weixin.qq.com/", 1)
+	log.Debug("API: %s", url)
+	res, err := http.Get(url)
+	if err != nil {
+		log.Debug(err.Error())
+		return
+	}
+	result, _ := ioutil.ReadAll(res.Body)
+	res.Body.Close()
 
-	gateway := new(gate.WSGate)
-	gateway.Addr = "localhost:" + "3000"
-	gateway.HTTPTimeout = 3 * 60
-	gateway.MaxConnNum = 1000
-	gateway.PendingWriteNum = 1000
-	gateway.ProtobufProcessor = utils.ProtobufProcess
-	gateway.Run(utils.CloseSig)
+	log.Debug("API_RET: %s", string(result))
+	w.Write(result)
 }
 
-type IA interface {
-	getA() int
-}
-
-type A struct {
-	value_A int
-}
-
-func (a *A) dumpA() {
-	log.Trace("A%d", a.value_A)
-}
-func (a *A) getA() int {
-	return a.value_A
-}
-
-type B struct {
-	IA
-	value_B int
-}
-
-func (b *B) dumpB() {
-	log.Trace("A%d B%d", b.getA(), b.value_B)
+func UserAuthorized(state string, token *weixin.WebAccessToken, w http.ResponseWriter, r *http.Request) bool {
+	key := "NikeName:" + token.OpenID
+	ret, err := nosql.Redis.Get(key).Result()
+	if err != nil {
+		userinfo := weixin.GetUserInfo(token.OpenID, true)
+		if userinfo != nil {
+			ret, err = nosql.Redis.Set(key, userinfo.NikeName, 0).Result()
+			if err != nil {
+				log.Debug(err.Error() + " | " + ret)
+			} else {
+				log.Trace("App: %s 有人授权了(new)name: %s", state, userinfo.NikeName)
+			}
+		}
+	} else {
+		log.Trace("App: %s 有人授权了name: %s", state, ret)
+	}
+	return true
 }
 
 func main() {
+	nosql.InitRedis(global.RedisURL, global.RedisPin, 0)
+	sqldb.Init()
+	mux := http.NewServeMux()
+	weixin.InitWeiXin(&weixin.WeiXinConfig{AppID: global.AppID,
+		AppSecret:       global.AppSecret,
+		OwnerID:         global.OwnerID,
+		ProcessMsg:      nil,
+		UserAuthorized:  UserAuthorized,
+		ServiceToken:    "test_wx",
+		MyServiceDomain: global.ServiceDomain,
+		AuthRedirectURL: "http://" + global.ServiceDomain + "/wx/authorize_redirect"}, mux)
+	weixin.RegistAuthRedirectUrl("FIRST_TEST", "http://"+global.ServiceDomain+"/app/demo")
+	mux.HandleFunc("/htdoc/", handleStatic)
+	mux.HandleFunc("/app/demo", handleAppDemo)
+	mux.HandleFunc("/wx/api/", handleWxApi)
 
-	auth.InitAuthHttpService()
+	if err := http.ListenAndServe(":3000", mux); err != nil {
+		log.Error(err.Error())
+	}
+	//if err := http.ListenAndServeTLS(":3000", baseDir+"https/cert.pem", baseDir+"https/key.pem", mux); err != nil {
+	//	log.Error(err.Error())
+	//}
+	return
 
 	log.Trace("启动......")
 
-	test.TestSinaAuth()
-
-	log.Trace("结束......")
+	go superservice.Instance.StartService(utils.SuperRpcAddr)
+	go gateservice.Instance.StartService(utils.SuperRpcAddr)
 
 	<-utils.CloseSig
+	log.Trace("结束......")
 	return
+
+	test.TestSinaAuth()
+	auth.InitAuthHttpService()
 	test.TestProtorpc()
 	utils.TestSnow()
 }

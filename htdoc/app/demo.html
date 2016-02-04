@@ -1,0 +1,107 @@
+<html>
+
+<head>
+<title>测试微信分享</title> 
+<script type="text/javascript" src="http://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
+<script type="text/javascript" src="http://libs.baidu.com/jquery/1.9.0/jquery.min.js"></script>
+
+<script type="text/javascript">
+var wxHost="http://liutp.vicp.net/wx/api/"
+$(document).ready(function(){
+  $("#b01").click(function(){
+	  //htmlobj=$.ajax({url:"https://api.weixin.qq.com/sns/userinfo?access_token={{.AccessToken}}&openid={{.OpenID}}&lang=zh_CN", async:false});
+	  htmlobj=$.ajax({url:wxHost+"sns/userinfo?access_token={{.AccessToken}}&openid={{.OpenID}}&lang=zh_CN", async:false});
+	  var user = eval('(' + htmlobj.responseText + ')');
+	  $("#myDiv").html(user.nickname);
+  });
+  $("#b02").click(function(){
+	  //htmlobj=$.ajax({url:"https://api.weixin.qq.com/sns/userinfo?access_token={{.AccessToken}}&openid={{.OpenID}}&lang=zh_CN", async:false});
+	  htmlobj=$.ajax({url:wxHost+"sns/userinfo?access_token={{.AccessToken}}&openid={{.ShareOpenID}}&lang=zh_CN", async:false});
+	  var user = eval('(' + htmlobj.responseText + ')');
+	  $("#shareDiv").html(user.nickname);
+  });
+});
+
+wx.ready(function(){
+
+	//获取“分享给朋友”按钮点击状态及自定义分享内容接口
+	wx.onMenuShareAppMessage({
+		title: '测试微信分享', // 分享标题
+		desc: '我就是看看分享的原理', // 分享描述
+		link: 'http://liutp.vicp.net/wx/authorize?state=FIRST_TEST$shareOpenID={{.OpenID}}', // 分享链接
+		imgUrl: 'http://liutp.vicp.net/htdoc/res/icon.jpg', // 分享图标
+		type: 'link', // 分享类型,music、video或link，不填默认为link
+		dataUrl: '', // 如果type是music或video，则要提供数据链接，默认为空
+		success: function () { 
+			alter("分享给了小伙伴呢")
+		},
+		cancel: function () { 
+			// 用户取消分享后执行的回调函数
+		}
+	});
+});
+
+wx.config({
+    debug: true, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
+    appId: 'wx8a6a182684374dfe', // 必填，公众号的唯一标识
+    timestamp: {{.TimeStamp}}, // 必填，生成签名的时间戳
+    nonceStr: '{{.Nonce}}', // 必填，生成签名的随机串
+    signature: '{{.Signature}}',// 必填，签名，见附录1
+    jsApiList: [
+		'checkJsApi',
+        'onMenuShareTimeline',
+        'onMenuShareAppMessage',
+        'onMenuShareQQ',
+        'onMenuShareWeibo',
+        'hideMenuItems',
+        'showMenuItems',
+        'hideAllNonBaseMenuItem',
+        'showAllNonBaseMenuItem',
+        'translateVoice',
+        'startRecord',
+        'stopRecord',
+        'onRecordEnd',
+        'playVoice',
+        'pauseVoice',
+        'stopVoice',
+        'uploadVoice',
+        'downloadVoice',
+        'chooseImage',
+        'previewImage',
+        'uploadImage',
+        'downloadImage',
+        'getNetworkType',
+        'openLocation',
+        'getLocation',
+        'hideOptionMenu',
+        'showOptionMenu',
+        'closeWindow',
+        'scanQRCode',
+        'chooseWXPay',
+        'openProductSpecificView',
+        'addCard',
+        'chooseCard',
+        'openCard'
+	] // 必填，需要使用的JS接口列表，所有JS接口列表见附录2
+});
+
+</script>
+<head>
+
+<body>
+<div style="font-size:36px">
+	认证成功了</br>
+	<p>你的AccessToken是<br/>{{.AccessToken}}</p>
+	<p>你的OpenID是<br/>{{.OpenID}}</p>
+	<p>你的ShareOpenID是<br/>{{.ShareOpenID}}</p>
+</div>
+
+<div id="myDiv" style="font-size:36px">
+	<button id="b01" type="button" style="font-size:36px">我是谁</button>
+</div>
+<div id="shareDiv" style="font-size:36px">
+	<button id="b02" type="button" style="font-size:36px">谁分享给我的</button>
+</div>
+</body>
+
+<html>

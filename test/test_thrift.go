@@ -2,8 +2,8 @@ package test
 
 import (
 	"TestGo/Rpc/demo"
-	"github.com/playnb/mustang/log"
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/playnb/mustang/log"
 	"time"
 )
 

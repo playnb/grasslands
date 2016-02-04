@@ -4,7 +4,8 @@
 
 ::for /r %%d in (.) do cd %%d && protoc --go_out=plugins=protorpc:. *.proto
 
-protoc --go_out=plugins=protorpc:. Msg/*.proto
-protoc --go_out=plugins=protorpc:. msg.pb/*.proto
+SET DIR1= %GOPATH%/src/github.com/playnb/mustang/msg.pb/
+CD %DIR1%
+protoc --go_out=plugins=protorpc:. *.proto
 
 pause

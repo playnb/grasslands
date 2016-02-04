@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>≤‚ ‘Œ¢–≈∑÷œÌ</title> 
+<head>
+<script type="text/javascript" src="http://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
+<script type="text/javascript" src="http://libs.baidu.com/jquery/1.9.0/jquery.min.js"></script>
+<script type="text/javascript">
+var wxHost="http://liutp.vicp.net/wx/api/"
+$(document).ready(function(){
+  $("#b01").click(function(){
+  //htmlobj=$.ajax({url:"https://api.weixin.qq.com/sns/userinfo?access_token={{.AccessToken}}&openid={{.OpenID}}&lang=zh_CN", async:false});
+  htmlobj=$.ajax({url:wxHost+"sns/userinfo?access_token={{.AccessToken}}&openid={{.OpenID}}&lang=zh_CN", async:false});
+  var user = eval('(' + htmlobj.responseText + ')');
+  $("#myDiv").html(user.nickname);
+  });
+});
+</script>
+<body>
+
+<div >
+<form action="/wx/authorize" method="POST"  ><input type="submit" style="font-size:42px" value="≤‚ ‘Œ¢–≈ ⁄»®"/></form>
+</div>
+
+</body>
+<html>
